@@ -21,9 +21,9 @@ namespace SnekScrem
 
 		public void Begin()
 		{
-			Console.ForegroundColor = Foreground;
-			Console.BackgroundColor = Background;
-			Console.Clear();
+			Foreground = Console.ForegroundColor;
+			Background = Console.BackgroundColor;
+			//Console.Clear();
 			Console.CursorVisible = false;
 		}
 
