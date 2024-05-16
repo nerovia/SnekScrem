@@ -1,7 +1,11 @@
-﻿using System.Diagnostics;
+﻿using SnekScrem;
+using System.Diagnostics;
 using System.Drawing;
 
 var size = new Size(-1, -1);
+
+List<Point> goodies = new();
+Glyph goodie_glyph = new('&', ' ', ConsoleColor.DarkYellow, ConsoleColor.Magenta);
 
 // the position that are occupied by the snake
 Queue<Point> snek_bits = new Queue<Point>();
@@ -11,32 +15,31 @@ Point snek_head = Point.Empty;
 Size snek_delta = Size.Empty;
 Glyph head_glyph = new(':', '¨', ConsoleColor.Red, ConsoleColor.Green);
 Glyph bits_glyph = new('~', '?', ConsoleColor.Yellow, ConsoleColor.Green);
+int snek_length = 2;
+const double snek_speed = 0.6;
 
-char[] nav_chars = "abcdefghijklmnopqrstuvwxyz".ToCharArray();
+ConsoleKey[] nav_keys = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".Select(c => (ConsoleKey)c).ToArray();
 int nav_idx = int.MaxValue;
 Size[] nav_deltas = [new(0, 1), new(0, -1), new(1, 0), new(-1, 0)];
 Move[] nav_moves = [];
 
-init_snek(5);
+init_snek(40);
 next_moves();
+
+var canvas = new ConsoleCanvas() { Foreground = ConsoleColor.Black, Background = ConsoleColor.White };
+canvas.Begin();
 
 while (true)
 {
-	int width = Console.BufferWidth;
-	int height = Console.BufferHeight;
-
+	
 	var moves = from m in nav_moves
-				where snek_delta != m.delta && snek_delta != Size.Empty - m.delta
-				let pos = snek_head + m.delta
-				where pos.X < width && pos.Y < height && pos.X >= 0 && pos.Y >= 0
-				select m;
-				 
-	foreach (var m in moves)
-		Debug.WriteLine(m);
+		where snek_delta != m.delta && snek_delta != Size.Empty - m.delta
+		where screen_rect().Contains(snek_head + m.delta)
+		select m;
 	
 	draw(moves);
 
-	var key = wait_input(TimeSpan.FromSeconds(0.8 / (snek_bits.Count + 1)));
+	var key = wait_input(TimeSpan.FromSeconds(snek_speed / snek_length));
 
 	if (!key.HasValue)
 	{
@@ -44,7 +47,7 @@ while (true)
 	}
 	else
 	{
-		var move = moves.FirstOrDefault(it => it.input == key.Value.KeyChar);
+		var move = moves.FirstOrDefault(it => it.key == key.Value.Key);
 		if (move != null)
 		{
 			snek_delta = move.delta;
@@ -54,66 +57,98 @@ while (true)
 		else
 		{
 			move_snek(snek_delta);
+			snek_length--;
 			if (snek_bits.Count > 0)
 				snek_bits.Dequeue();
 		}
 	}
+
+	test_snek();
 }
 
-char next_nav()
+ConsoleKey next_key()
 {
-	if (nav_idx >= nav_chars.Length)
+	if (nav_idx >= nav_keys.Length)
 	{
-		Random.Shared.Shuffle(nav_chars);
+		Random.Shared.Shuffle(nav_keys);
 		nav_idx = 0;
 	}
-	return nav_chars[nav_idx++];
+	return nav_keys[nav_idx++];
 }
 
 // moves the snake
-void move_snek(Size delta, bool grow = false)
+void move_snek(Size delta)
 {
-	if (!grow && snek_bits.Count > 0)
-	{
+	if (snek_bits.Count >= snek_length)
 		snek_bits.Dequeue();
-		snek_bits.Enqueue(snek_head);
-	}
-	snek_head = snek_head + delta;
+	snek_bits.Enqueue(snek_head);
+	snek_head += delta;
 }
 
 void next_moves()
 {
+	nav_moves = [
+		new Move(ConsoleKey.UpArrow, new(0, -1)),
+		new Move(ConsoleKey.DownArrow, new(0, 1)),
+		new Move(ConsoleKey.RightArrow, new(1, 0)),
+		new Move(ConsoleKey.LeftArrow, new(-1, 0)),
+	];
+	/*
 	nav_moves = (from delta in nav_deltas
-				select new Move(next_nav(), delta)).ToArray();
+				select new Move(next_key(), delta)).ToArray();
+	*/
 }
 
 void init_snek(int length)
 {
 	snek_bits.Clear();
-	snek_head = new(Console.BufferWidth / 2, Console.BufferHeight / 2);
-	snek_delta = nav_deltas[0];
-	for (int i = 1; i < length; i++)
-		snek_bits.Enqueue(snek_head);
+	snek_head = new(screen_rect().Width / 2, screen_rect().Height / 2);
+	snek_delta = Size.Empty;
+	snek_length = length;
+}
+
+void test_snek()
+{
+	if (goodies.Count == 0)
+	{
+		var k = Random.Shared.Next(1, 5);
+		for (int i = 0; i < k; i++)
+			goodies.Add(new(Random.Shared.Next(0, Console.WindowWidth), Random.Shared.Next(0, Console.WindowHeight)));
+	}
+	int n = goodies.RemoveAll(pos => pos == snek_head);
+	snek_length += n;
+
+
+	var screen = screen_rect();
+	if (snek_head.X < 0)
+		snek_head.X = screen.Width - 1;
+	else if (snek_head.X >= screen.Width)
+		snek_head.X = 0;
+	if (snek_head.Y < 0)
+		snek_head.Y = screen.Height - 1;
+	else if (snek_head.Y >= screen.Height)
+		snek_head.Y = 0;
+
 }
 
 void draw(IEnumerable<Move> moves)
 {
-	set_color(ConsoleColor.Black, ConsoleColor.White);
-	Console.Clear();
-
+	
 	// draw moves
 	foreach (var move in moves)
-		draw_at(snek_head + move.delta, move.input);
+		canvas.Draw(snek_head + move.delta, (char)move.key);
 
 	// draw snek bits
-	set_color(bits_glyph.foreground, bits_glyph.background);
 	foreach (var bit in snek_bits)
-		draw_at(bit, snek_delta.Width != 0 ? bits_glyph.symbol : bits_glyph.other);
+		canvas.Draw(bit, snek_delta.Width != 0 ? bits_glyph.symbol : bits_glyph.other, bits_glyph.foreground, bits_glyph.background);
 
 	// draw snek head
-	set_color(head_glyph.foreground, head_glyph.background);
-	draw_at(snek_head, snek_delta.Width != 0 ? head_glyph.symbol : head_glyph.other);
+	canvas.Draw(snek_head, snek_delta.Width != 0 ? head_glyph.symbol : head_glyph.other, head_glyph.foreground, head_glyph.background);
 
+	foreach (var goodie in goodies)
+		canvas.Draw(goodie, goodie_glyph.symbol);
+
+	canvas.Apply();
 }
 
 ConsoleKeyInfo? wait_input(TimeSpan timeout)
@@ -136,6 +171,9 @@ void set_color(ConsoleColor? foreground, ConsoleColor? background)
 	Console.BackgroundColor = background ?? Console.BackgroundColor;
 }
 
+Rectangle screen_rect() => new Rectangle(0, 0, Console.WindowWidth, Console.WindowHeight);
+
+
 record struct Glyph(char symbol, char other, ConsoleColor foreground, ConsoleColor background);
 
-record Move(char input, Size delta);
+record Move(ConsoleKey key, Size delta);
