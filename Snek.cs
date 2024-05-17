@@ -7,8 +7,8 @@ namespace SnekScrem
 		readonly Queue<Point> nodes = new();
 		
 		public IEnumerable<Point> Nodes => nodes;
-		public Point Position { get; private set; }
-		public Direction Direction { get; private set; }
+		public Point Position;
+		public Direction Direction;
 		public int Length { get; private set; }
 
 		public void Reset(Point position, int length)
@@ -27,20 +27,9 @@ namespace SnekScrem
 			Position += Direction.Delta();
 		}
 
-		public void Move(Direction direction)
-		{
-			Direction = direction;
-			Move();
-		}
-
 		public void Grow()
 		{
 			Length++;
-		}
-
-		public void Wrap(Size size)
-		{
-			Position = new Point(Position.X % (size.Width - 1), Position.Y % (size.Height - 1));
 		}
 	}
 }

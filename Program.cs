@@ -3,11 +3,11 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 
-var size = new Size(-1, -1);
-
 var snek = new Snek();
 
 List<Point> goodies = new();
+
+var agent = new Agent();
 
 const double snek_speed = 0.6;
 
@@ -29,36 +29,33 @@ snek.Reset(new(canvas.Size.Width / 2, canvas.Size.Height / 2), 10);
 
 while (true)
 {
-	
+	Test();
+
 	var moves = from m in snek_moves
 		where snek.Direction != m.Direction && snek.Direction != m.Direction.Inverse()
 		select m;
 	
-	draw(moves);
+	Draw(moves);
 
-	var key = wait_input(TimeSpan.FromSeconds(snek_speed / snek.Length));
+	var key = GetInput(TimeSpan.FromSeconds(snek_speed / snek.Length));
 
-	if (!key.HasValue)
-	{
-		snek.Move();
-	}
-	else
+	if (key.HasValue)
 	{
 		var move = moves.FirstOrDefault(it => it.Key == key.Value.Key);
 		if (move != null)
-		{
-			snek.Move(move.Direction);
-		}
-		else
-		{
-			snek.Move();
-		}
+			snek.Direction = move.Direction;
+	}
+	else
+	{
+		agent.Act(snek, goodies);
 	}
 
-	test_snek();
+	snek.Move();
+	
+	
 }
 
-void test_snek()
+void Test()
 {
 	if (goodies.Count == 0)
 	{
@@ -69,14 +66,13 @@ void test_snek()
 	if (goodies.RemoveAll(pos => pos == snek.Position) > 0)
 		snek.Grow();
 
-	snek.Wrap(screen_rect().Size);
+	snek.Position = new Point(Mod(snek.Position.X, canvas.Size.Width), Mod(snek.Position.Y, canvas.Size.Height));
 
 	if (snek.Length <= 0 || snek.Nodes.Any(bit => bit == snek.Position) && snek.Direction != Direction.None)
-		exit();
-
+		Exit();
 }
 
-void draw(IEnumerable<Move> moves)
+void Draw(IEnumerable<Move> moves)
 {
 	foreach (var goodie in goodies)
 		canvas.Add(goodie, glyph_goodies.symbol);
@@ -91,7 +87,7 @@ void draw(IEnumerable<Move> moves)
 	canvas.Refresh();
 }
 
-ConsoleKeyInfo? wait_input(TimeSpan timeout)
+ConsoleKeyInfo? GetInput(TimeSpan timeout)
 {
 	var watch = new Stopwatch();
 	watch.Start();
@@ -99,7 +95,7 @@ ConsoleKeyInfo? wait_input(TimeSpan timeout)
 	return Console.KeyAvailable ? Console.ReadKey(true) : null;
 }
 
-void exit()
+void Exit()
 {
 	canvas.Clear();
 	canvas.End();
@@ -107,7 +103,7 @@ void exit()
 	Environment.Exit(0);
 }
 
-Rectangle screen_rect() => new Rectangle(0, 0, Console.WindowWidth, Console.WindowHeight);
+int Mod(int x, int m) => x < 0 ? ((x % m) + m) % m : x % m;
 
 record struct Glyph(char symbol, char other, ConsoleColor foreground, ConsoleColor background);
 

@@ -11,8 +11,16 @@ namespace SnekScrem
 		None = 0,
 	}
 
-	static class Extension
+	static class Extensions
 	{
+		public static int Distance(Point a, Point b)
+		{
+
+			var x = Math.Abs(a.X - b.X);
+			var y = Math.Abs(a.Y - b.Y);
+			return x + y;
+		}
+
 		public static Size Delta(this Direction direction) => direction switch
 		{
 			Direction.Up => new(0, -1),
