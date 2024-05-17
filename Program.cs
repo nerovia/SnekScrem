@@ -1,22 +1,21 @@
 ﻿using SnekScrem;
 using System.Diagnostics;
 using System.Drawing;
+using System.Reflection;
 
 var size = new Size(-1, -1);
 
+var snek = new Snek();
+
 List<Point> goodies = new();
 
-Queue<Point> snek_bits = new Queue<Point>();
-Point snek_head = Point.Empty;
-Size snek_delta = Size.Empty;
-int snek_length = 2;
 const double snek_speed = 0.6;
 
 Move[] snek_moves = [
-	new Move(ConsoleKey.UpArrow, new(0, -1)),
-	new Move(ConsoleKey.DownArrow, new(0, 1)),
-	new Move(ConsoleKey.RightArrow, new(1, 0)),
-	new Move(ConsoleKey.LeftArrow, new(-1, 0)),
+	new Move(ConsoleKey.UpArrow, Direction.Up),
+	new Move(ConsoleKey.DownArrow, Direction.Down),
+	new Move(ConsoleKey.RightArrow, Direction.Right),
+	new Move(ConsoleKey.LeftArrow, Direction.Left),
 ];
 
 Glyph glyph_head = new(':', '¨', ConsoleColor.Red, ConsoleColor.Green);
@@ -26,55 +25,37 @@ Glyph glyph_goodies = new('&', ' ', ConsoleColor.DarkYellow, ConsoleColor.Magent
 var canvas = new ConsoleCanvas();
 canvas.Begin();
 
-init_snek(10);
+snek.Reset(new(canvas.Size.Width / 2, canvas.Size.Height / 2), 10);
 
 while (true)
 {
 	
 	var moves = from m in snek_moves
-		where snek_delta != m.delta && snek_delta != Size.Empty - m.delta
+		where snek.Direction != m.Direction && snek.Direction != m.Direction.Inverse()
 		select m;
 	
 	draw(moves);
 
-	var key = wait_input(TimeSpan.FromSeconds(snek_speed / snek_length));
+	var key = wait_input(TimeSpan.FromSeconds(snek_speed / snek.Length));
 
 	if (!key.HasValue)
 	{
-		move_snek(snek_delta);
+		snek.Move();
 	}
 	else
 	{
-		var move = moves.FirstOrDefault(it => it.key == key.Value.Key);
+		var move = moves.FirstOrDefault(it => it.Key == key.Value.Key);
 		if (move != null)
 		{
-			snek_delta = move.delta;
-			move_snek(move.delta);
+			snek.Move(move.Direction);
 		}
 		else
 		{
-			move_snek(snek_delta);
+			snek.Move();
 		}
 	}
 
 	test_snek();
-}
-
-// moves the snake
-void move_snek(Size delta)
-{
-	if (snek_bits.Count >= snek_length)
-		snek_bits.Dequeue();
-	snek_bits.Enqueue(snek_head);
-	snek_head += delta;
-}
-
-void init_snek(int length)
-{
-	snek_bits.Clear();
-	snek_head = new(screen_rect().Width / 2, screen_rect().Height / 2);
-	snek_delta = Size.Empty;
-	snek_length = length;
 }
 
 void test_snek()
@@ -85,21 +66,12 @@ void test_snek()
 		for (int i = 0; i < k; i++)
 			goodies.Add(new(Random.Shared.Next(0, Console.WindowWidth), Random.Shared.Next(0, Console.WindowHeight)));
 	}
-	int n = goodies.RemoveAll(pos => pos == snek_head);
-	snek_length += n;
+	if (goodies.RemoveAll(pos => pos == snek.Position) > 0)
+		snek.Grow();
 
+	snek.Wrap(screen_rect().Size);
 
-	var screen = screen_rect();
-	if (snek_head.X < 0)
-		snek_head.X = screen.Width - 1;
-	else if (snek_head.X >= screen.Width)
-		snek_head.X = 0;
-	if (snek_head.Y < 0)
-		snek_head.Y = screen.Height - 1;
-	else if (snek_head.Y >= screen.Height)
-		snek_head.Y = 0;
-
-	if (snek_length <= 0 || snek_bits.Any(bit => bit == snek_head) && snek_delta != Size.Empty)
+	if (snek.Length <= 0 || snek.Nodes.Any(bit => bit == snek.Position) && snek.Direction != Direction.None)
 		exit();
 
 }
@@ -110,11 +82,11 @@ void draw(IEnumerable<Move> moves)
 		canvas.Add(goodie, glyph_goodies.symbol);
 
 	// draw snek bits
-	foreach (var bit in snek_bits)
-		canvas.Add(bit, snek_delta.Width != 0 ? glyph_snek.symbol : glyph_snek.other, glyph_snek.foreground, glyph_snek.background);
+	foreach (var bit in snek.Nodes)
+		canvas.Add(bit, snek.Direction.IsHorizontal() ? glyph_snek.symbol : glyph_snek.other, glyph_snek.foreground, glyph_snek.background);
 
 	// draw snek head
-	canvas.Add(snek_head, snek_delta.Width != 0 ? glyph_head.symbol : glyph_head.other, glyph_head.foreground, glyph_head.background);
+	canvas.Add(snek.Position, snek.Direction.IsHorizontal() ? glyph_head.symbol : glyph_head.other, glyph_head.foreground, glyph_head.background);
 
 	canvas.Refresh();
 }
@@ -131,7 +103,7 @@ void exit()
 {
 	canvas.Clear();
 	canvas.End();
-	Console.WriteLine($"YOU ACHIEVED SNEK LENGTH OF {snek_length}!");
+	Console.WriteLine($"YOU ACHIEVED SNEK LENGTH OF {snek.Length}!");
 	Environment.Exit(0);
 }
 
@@ -139,4 +111,4 @@ Rectangle screen_rect() => new Rectangle(0, 0, Console.WindowWidth, Console.Wind
 
 record struct Glyph(char symbol, char other, ConsoleColor foreground, ConsoleColor background);
 
-record Move(ConsoleKey key, Size delta);
+record Move(ConsoleKey Key, Direction Direction);

@@ -18,6 +18,8 @@ namespace SnekScrem
 		HashSet<Cell> DrawBuffer = new(CellPositionComparer.Default);
 		HashSet<Cell> EraseBuffer = new(CellPositionComparer.Default);
 
+		public Size Size => new(Console.WindowWidth, Console.WindowHeight);
+
 		public void Begin()
 		{
 			Foreground = Console.ForegroundColor;
