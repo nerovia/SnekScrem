@@ -23,7 +23,7 @@ Glyph glyph_head = new(':', '¨', ConsoleColor.Red, ConsoleColor.Green);
 Glyph glyph_snek = new('~', '?', ConsoleColor.Yellow, ConsoleColor.Green);
 Glyph glyph_goodies = new('&', ' ', ConsoleColor.DarkYellow, ConsoleColor.Magenta);
 
-var canvas = new ConsoleCanvas() { Foreground = ConsoleColor.Black, Background = ConsoleColor.White };
+var canvas = new ConsoleCanvas();
 canvas.Begin();
 
 init_snek(10);
@@ -100,23 +100,23 @@ void test_snek()
 		snek_head.Y = 0;
 
 	if (snek_length <= 0 || snek_bits.Any(bit => bit == snek_head) && snek_delta != Size.Empty)
-		Environment.Exit(0);
+		exit();
 
 }
 
 void draw(IEnumerable<Move> moves)
 {
+	foreach (var goodie in goodies)
+		canvas.Add(goodie, glyph_goodies.symbol);
+
 	// draw snek bits
 	foreach (var bit in snek_bits)
-		canvas.Draw(bit, snek_delta.Width != 0 ? glyph_snek.symbol : glyph_snek.other, glyph_snek.foreground, glyph_snek.background);
+		canvas.Add(bit, snek_delta.Width != 0 ? glyph_snek.symbol : glyph_snek.other, glyph_snek.foreground, glyph_snek.background);
 
 	// draw snek head
-	canvas.Draw(snek_head, snek_delta.Width != 0 ? glyph_head.symbol : glyph_head.other, glyph_head.foreground, glyph_head.background);
+	canvas.Add(snek_head, snek_delta.Width != 0 ? glyph_head.symbol : glyph_head.other, glyph_head.foreground, glyph_head.background);
 
-	foreach (var goodie in goodies)
-		canvas.Draw(goodie, glyph_goodies.symbol);
-
-	canvas.Apply();
+	canvas.Refresh();
 }
 
 ConsoleKeyInfo? wait_input(TimeSpan timeout)
@@ -125,6 +125,14 @@ ConsoleKeyInfo? wait_input(TimeSpan timeout)
 	watch.Start();
 	SpinWait.SpinUntil(() => Console.KeyAvailable || watch.Elapsed > timeout);
 	return Console.KeyAvailable ? Console.ReadKey(true) : null;
+}
+
+void exit()
+{
+	canvas.Clear();
+	canvas.End();
+	Console.WriteLine($"YOU ACHIEVED SNEK LENGTH OF {snek_length}!");
+	Environment.Exit(0);
 }
 
 Rectangle screen_rect() => new Rectangle(0, 0, Console.WindowWidth, Console.WindowHeight);

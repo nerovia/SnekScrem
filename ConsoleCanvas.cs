@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
@@ -11,62 +12,70 @@ namespace SnekScrem
 {
 	class ConsoleCanvas
 	{
-
-		public ConsoleColor Foreground { get; set; }
-		public ConsoleColor Background { get; set; }
-
-		Dictionary<Point, Cell> DrawBuffer = new();
-		Dictionary<Point, Cell> EraseBuffer = new();
-		static readonly CellPositionComparer comparer = new();
+		ConsoleColor Foreground;
+		ConsoleColor Background;
+		Point CursorPosition;
+		HashSet<Cell> DrawBuffer = new(CellPositionComparer.Default);
+		HashSet<Cell> EraseBuffer = new(CellPositionComparer.Default);
 
 		public void Begin()
 		{
 			Foreground = Console.ForegroundColor;
 			Background = Console.BackgroundColor;
-			//Console.Clear();
 			Console.CursorVisible = false;
+			(CursorPosition.X, CursorPosition.Y) = Console.GetCursorPosition();
 		}
 
-		public void Apply()
+		public void End()
 		{
 			Console.ForegroundColor = Foreground;
 			Console.BackgroundColor = Background;
-			// don't erase cells at positions that will be drawn
-			foreach (var cell in EraseBuffer.Values.Except(DrawBuffer.Values, comparer))
-			{
-				Console.SetCursorPosition(cell.Position.X, cell.Position.Y);
-				Console.Write(' ');
-			}
+			Console.CursorVisible = true;
+			Console.SetCursorPosition(CursorPosition.X, CursorPosition.Y);
+		}
 
-			foreach (var group in DrawBuffer.Values.GroupBy(it => new CellKey(it.Foreground, it.Background)))
+		public void Draw()
+		{
+			foreach (var group in DrawBuffer.GroupBy(it => (it.Foreground, it.Background)))
 			{
-				Console.ForegroundColor = group.Key.foreground ?? Foreground;
-				Console.BackgroundColor = group.Key.background ?? Background;
-				// don't draw cells that haven't changed
+				Console.ForegroundColor = group.Key.Foreground ?? Foreground;
+				Console.BackgroundColor = group.Key.Background ?? Background;
 				foreach (var cell in group)
 				{
 					Console.SetCursorPosition(cell.Position.X, cell.Position.Y);
 					Console.Write(cell.Glyph);
 				}
 			}
-
-			(DrawBuffer, EraseBuffer) = (EraseBuffer, DrawBuffer);
-			DrawBuffer.Clear();
-			
-
 		}
 
-		public void Draw(Point pos, char c, bool transient = true) => Draw(pos, c, null, null, transient);
+		public void Clear()
+		{
+			Console.ForegroundColor = Foreground;
+			Console.BackgroundColor = Background;
+			foreach (var cell in EraseBuffer.Except(DrawBuffer, CellPositionComparer.Default))
+			{
+				Console.SetCursorPosition(cell.Position.X, cell.Position.Y);
+				Console.Write(' ');
+			}
+		}
 
-		public void Draw(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background,  bool transient = true)
+		public void Refresh()
+		{
+			Clear();
+			Draw();
+			(DrawBuffer, EraseBuffer) = (EraseBuffer, DrawBuffer);
+			DrawBuffer.Clear();
+		}
+
+		public void Add(Point pos, char c, bool transient = true) => Add(pos, c, null, null, transient);
+
+		public void Add(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background,  bool transient = true)
 		{
 			if (transient)
 			{
 				var cell = new Cell(pos, c, foreground, background);
-				if (DrawBuffer.ContainsKey(pos))
-					DrawBuffer[pos] = cell;
-				else
-					DrawBuffer.Add(pos, cell);
+				DrawBuffer.Remove(cell);
+				DrawBuffer.Add(cell);
 			}
 		}
 
@@ -76,6 +85,8 @@ namespace SnekScrem
 
 	class CellPositionComparer : IEqualityComparer<Cell>
 	{
+		public static readonly CellPositionComparer Default = new CellPositionComparer();
+
 		public bool Equals(Cell? x, Cell? y)
 		{
 			if (x == null && y == null)
@@ -88,21 +99,6 @@ namespace SnekScrem
 		public int GetHashCode([DisallowNull] Cell obj)
 		{
 			return obj.Position.GetHashCode();
-		}
-	}
-
-	record struct CellKey(ConsoleColor? foreground, ConsoleColor? background) : IComparable<CellKey>
-	{
-		static int ColorIndex(ConsoleColor? color)
-		{
-			return color.HasValue ? (int)color.Value : -1;
-		}
-
-		public int CompareTo(CellKey other)
-		{
-			int result = ColorIndex(foreground) - ColorIndex(other.foreground);
-			if (result != 0) return result;
-			return ColorIndex(background) - ColorIndex(other.background);
 		}
 	}
 }
