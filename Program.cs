@@ -157,7 +157,18 @@ bool Test(Snek snek)
 		Task.Run(Console.Beep);
 	}
 
-	return snek.Length <= 0 || entities.SelectMany(it => it.Snek.Parts).Any(it => it.Position == snek.Position) && snek.Direction != Direction.None;
+	if (snek.Length <= 0)
+		return true;
+
+	if (snek.Direction != Direction.None)
+	{
+		if (entities.SelectMany(it => it.Snek.Parts).Any(it => it.Position == snek.Position))
+			return true;
+		if (entities.Where(it => it.Snek != snek).Any(it => it.Snek.Position == snek.Position))
+			return true;
+	}
+
+	return false;
 }
 
 void Draw(SnekEntity player)
