@@ -2,29 +2,36 @@
 
 namespace SnekScrem
 {
+	struct OrientedPoint(Point position, Direction direction)
+	{
+		public readonly static OrientedPoint Empty = new(Point.Empty, Direction.None);
+		public Point Position = position;
+		public Direction Direction = direction;
+	}
+
 	internal class Snek
 	{
-		readonly Queue<Point> nodes = new();
+		readonly Queue<OrientedPoint> nodes = new();
 		
-		public IEnumerable<Point> Nodes => nodes;
-		public Point Position;
-		public Direction Direction;
+		public IEnumerable<OrientedPoint> Parts => nodes;
+		public OrientedPoint Head;
+		public Point Position { get => Head.Position; set => Head.Position = value; }
+		public Direction Direction { get => Head.Direction; set => Head.Direction = value; }
 		public int Length { get; private set; }
 
 		public void Reset(Point position, int length)
 		{
 			nodes.Clear();
 			Length = length;
-			Position = position;
-			Direction = Direction.None;
+			Head = new(position, Direction.None);
 		}
 
 		public void Move()
 		{
 			if (nodes.Count >= Length)
 				nodes.Dequeue();
-			nodes.Enqueue(Position);
-			Position += Direction.Delta();
+			nodes.Enqueue(Head);
+			Head.Position += Head.Direction.Delta();
 		}
 
 		public void Grow()

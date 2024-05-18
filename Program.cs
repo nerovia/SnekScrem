@@ -14,7 +14,11 @@ var green = new SnekSkin()
 		Direction.Up or Direction.Down => '¨',
 		_ => ':',
 	},
-	BodyGlyph = direction => direction switch { _ => '~' }
+	BodyGlyph = direction => direction switch 
+	{
+		Direction.Up or Direction.Down => '|',
+		_ => '-',
+	}
 };
 var red = new SnekSkin()
 { 
@@ -28,7 +32,9 @@ var red = new SnekSkin()
 	},
 	BodyGlyph = direction => direction switch
 	{
-		Direction.Up or Direction.Down => 'v',
+		Direction.Up => '^',
+		Direction.Down => 'v',
+		Direction.Left => '<',
 		_ => '>'
 	}
 };
@@ -44,7 +50,7 @@ SnekEntity[] entities = [
 		Agent = new PlayerAgent(controls),
 		Skin = green,
 		ResetHandle = self => self.Snek.Reset(new(Console.WindowWidth / 2, Console.WindowHeight / 2), 10),
-		LooseHandle = self => Exit(self)
+		LooseHandle = Exit
 	},
 	new SnekEntity()
 	{
@@ -109,7 +115,7 @@ bool Test(Snek snek)
 		Task.Run(Console.Beep);
 	}
 
-	return snek.Length <= 0 || entities.SelectMany(it => it.Snek.Nodes).Any(bit => bit == snek.Position) && snek.Direction != Direction.None;
+	return snek.Length <= 0 || entities.SelectMany(it => it.Snek.Parts).Any(it => it.Position == snek.Position) && snek.Direction != Direction.None;
 }
 
 void Draw(SnekEntity player)
@@ -120,8 +126,8 @@ void Draw(SnekEntity player)
 	foreach (var goodie in treats)
 		ConsoleCanvas.Draw(goodie, treatGlyph.Glyph, treatGlyph.Foreground, treatGlyph.Background);
 
-	foreach (var bit in snek.Nodes)
-		ConsoleCanvas.Draw(bit, skin.BodyGlyph(snek.Direction), skin.BodyColor, skin.BaseColor);
+	foreach (var part in snek.Parts)
+		ConsoleCanvas.Draw(part.Position, skin.BodyGlyph(part.Direction), skin.BodyColor, skin.BaseColor);
 
 	ConsoleCanvas.Draw(snek.Position, skin.HeadGlyph(snek.Direction), skin.HeadColor, skin.BaseColor);
 }

@@ -68,7 +68,7 @@ namespace SnekScrem
 
 			subject.Direction = Moves
 				.Select(it => (dir: it, pos: subject.Position + it.Delta()))
-				.Where(it => !context.Sneks.SelectMany(s => s.Nodes).Contains(it.pos))
+				.Where(it => !context.Sneks.SelectMany(s => s.Parts).Any(p => p.Position == it.pos))
 				.DefaultIfEmpty((dir: subject.Direction, pos: Point.Empty))
 				.MinBy(it => Extensions.Distance(it.pos, target)).dir;
 		}
