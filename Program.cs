@@ -67,13 +67,13 @@ while (true)
 
 bool Test(Snek snek)
 {
+	snek.Position = new Point(Mod(snek.Position.X, canvas.Size.Width), Mod(snek.Position.Y, canvas.Size.Height));
+	
 	if (goodies.RemoveAll(pos => pos == snek.Position) > 0)
 	{
 		snek.Grow();
 		Task.Run(Console.Beep);
 	}
-
-	snek.Position = new Point(Mod(snek.Position.X, canvas.Size.Width), Mod(snek.Position.Y, canvas.Size.Height));
 
 	return snek.Length <= 0 || players.SelectMany(it => it.Snek.Nodes).Any(bit => bit == snek.Position) && snek.Direction != Direction.None;
 }
