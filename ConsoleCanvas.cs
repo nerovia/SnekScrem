@@ -15,8 +15,8 @@ namespace SnekScrem
 		ConsoleColor Foreground;
 		ConsoleColor Background;
 		Point CursorPosition = Point.Empty;
-		HashSet<Cell> DrawBuffer = new(CellPositionComparer.Default);
-		HashSet<Cell> EraseBuffer = new(CellPositionComparer.Default);
+		HashSet<Point> DrawBuffer = new();
+		HashSet<Point> EraseBuffer = new();
 
 		public Size Size => new(Console.WindowWidth, Console.WindowHeight); 
 
@@ -36,71 +36,30 @@ namespace SnekScrem
 			Console.SetCursorPosition(CursorPosition.X, CursorPosition.Y);
 		}
 
-		public void Draw()
-		{
-			foreach (var group in DrawBuffer.GroupBy(it => (it.Foreground, it.Background)))
-			{
-				Console.ForegroundColor = group.Key.Foreground ?? Foreground;
-				Console.BackgroundColor = group.Key.Background ?? Background;
-				foreach (var cell in group)
-				{
-					Console.SetCursorPosition(cell.Position.X, cell.Position.Y);
-					Console.Write(cell.Glyph);
-				}
-			}
-		}
-
-		public void Clear()
+		public void Clean()
 		{
 			Console.ForegroundColor = Foreground;
 			Console.BackgroundColor = Background;
-			foreach (var cell in EraseBuffer.Except(DrawBuffer, CellPositionComparer.Default))
+			foreach (var pos in EraseBuffer.Except(DrawBuffer))
 			{
-				Console.SetCursorPosition(cell.Position.X, cell.Position.Y);
+				Console.SetCursorPosition(pos.X, pos.Y);
 				Console.Write(' ');
 			}
-		}
-
-		public void Refresh()
-		{
-			Clear();
-			Draw();
 			(DrawBuffer, EraseBuffer) = (EraseBuffer, DrawBuffer);
 			DrawBuffer.Clear();
 		}
 
-		public void Add(Point pos, char c, bool transient = true) => Add(pos, c, null, null, transient);
+		public void Draw(Point pos, char c, bool transient = true) => Draw(pos, c, null, null);
 
-		public void Add(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background,  bool transient = true)
+		public void Draw(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background)
 		{
-			if (transient)
-			{
-				var cell = new Cell(pos, c, foreground, background);
-				DrawBuffer.Remove(cell);
-				DrawBuffer.Add(cell);
-			}
+			DrawBuffer.Remove(pos);
+			DrawBuffer.Add(pos);
+			Console.ForegroundColor = foreground ?? Foreground;
+			Console.BackgroundColor = background ?? Background;
+			Console.SetCursorPosition(pos.X, pos.Y);
+			Console.Write(c);
 		}
 
-	}
-
-	record Cell(Point Position, char Glyph, ConsoleColor? Foreground = null, ConsoleColor? Background = null);
-
-	class CellPositionComparer : IEqualityComparer<Cell>
-	{
-		public static readonly CellPositionComparer Default = new CellPositionComparer();
-
-		public bool Equals(Cell? x, Cell? y)
-		{
-			if (x == null && y == null)
-				return true;
-			if (x == null || y == null)
-				return false;
-			return x.Position == y.Position;
-		}
-
-		public int GetHashCode([DisallowNull] Cell obj)
-		{
-			return obj.Position.GetHashCode();
-		}
 	}
 }

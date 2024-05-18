@@ -50,7 +50,7 @@ while (true)
 		Draw(player);
 	}
 
-	canvas.Refresh();
+	canvas.Clean();
 	ConsoleInput.Update();
 
 	foreach (var player in players)
@@ -82,14 +82,14 @@ void Draw(Player player)
 {
 	var snek = player.Snek;
 	foreach (var goodie in goodies)
-		canvas.Add(goodie, glyph_goodies.symbol, glyph_goodies.foreground, glyph_goodies.background);
+		canvas.Draw(goodie, glyph_goodies.symbol, glyph_goodies.foreground, glyph_goodies.background);
 
 	// draw snek bits
 	foreach (var bit in snek.Nodes)
-		canvas.Add(bit, snek.Direction.IsHorizontal() ? player.BodyGlyph.symbol : player.BodyGlyph.other, player.BodyGlyph.foreground, player.BodyGlyph.background);
+		canvas.Draw(bit, snek.Direction.IsHorizontal() ? player.BodyGlyph.symbol : player.BodyGlyph.other, player.BodyGlyph.foreground, player.BodyGlyph.background);
 
 	// draw snek head
-	canvas.Add(snek.Position, snek.Direction.IsHorizontal() ? player.HeadGlyph.symbol : player.HeadGlyph.other, player.HeadGlyph.foreground, player.HeadGlyph.background);
+	canvas.Draw(snek.Position, snek.Direction.IsHorizontal() ? player.HeadGlyph.symbol : player.HeadGlyph.other, player.HeadGlyph.foreground, player.HeadGlyph.background);
 
 }
 
@@ -106,7 +106,7 @@ void Exit(Player player)
 	for (int i = 1000; i > 800; i -= 50)
 		Console.Beep(i, 100);
 	Thread.Sleep(1000);
-	canvas.Clear();
+	canvas.Clean();
 	canvas.End();
 	Console.WriteLine($"YOU ACHIEVED SNEK LENGTH OF {player.Snek.Length}!");
 	Environment.Exit(0);
