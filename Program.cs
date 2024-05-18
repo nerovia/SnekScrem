@@ -18,7 +18,8 @@ var green = new SnekSkin()
 	{
 		Direction.Up or Direction.Down => '|',
 		_ => '-',
-	}
+	},
+	DeadGlyph = _ => 'X',
 };
 var red = new SnekSkin()
 { 
@@ -36,10 +37,47 @@ var red = new SnekSkin()
 		Direction.Down => 'v',
 		Direction.Left => '<',
 		_ => '>'
-	}
+	},
+	DeadGlyph = _ => 'X',
+};
+var geuse = new SnekSkin()
+{
+	BaseColor = ConsoleColor.Gray,
+	BodyColor = ConsoleColor.Black,
+	HeadColor = ConsoleColor.Green,
+	HeadGlyph = direction => direction switch
+	{
+		Direction.Up or Direction.Down => '¨',
+		_ => ':'
+	},
+	BodyGlyph = direction => direction switch
+	{
+		Direction.Up => '▀',
+		Direction.Down => '▄',
+		Direction.Left => '▌',
+		Direction.Right => '▐',
+		_ => '▚',
+	},
+	DeadGlyph = _ => 'X',
+};
+var screm = new SnekSkin()
+{
+	BaseColor = ConsoleColor.White,
+	BodyColor = ConsoleColor.Red,
+	HeadColor = ConsoleColor.Red,
+	HeadGlyph = _ => 'A',
+	BodyGlyph = _ => 'H',
+	DeadGlyph = _ => 'O',
 };
 var treatGlyph = new ColoredGlyph('&', ConsoleColor.Magenta, ConsoleColor.Cyan);
 
+var namedSkins = new Dictionary<string, SnekSkin>
+{
+	{ "poison", green },
+	{ "crimson", red },
+	{ "geuse", geuse },
+	{ "screm", screm }
+};
 
 const double snek_speed = 0.6;
 
@@ -48,7 +86,7 @@ SnekEntity[] entities = [
 	new SnekEntity()
 	{
 		Agent = new PlayerAgent(controls),
-		Skin = green,
+		Skin = args.Length > 0 ? namedSkins[args[0]] : green,
 		ResetHandle = self => self.Snek.Reset(new(Console.WindowWidth / 2, Console.WindowHeight / 2), 10),
 		LooseHandle = Exit
 	},
@@ -91,15 +129,19 @@ while (true)
 		Draw(entity);
 	}
 
-	ConsoleCanvas.Clean();
 	ConsoleInput.Update();
+	ConsoleCanvas.Clean();
 
 	foreach (var entity in entities)
 	{
 		entity.Agent.Act(entity.Snek, context);
 		entity.Snek.Move();
 		if (Test(entity.Snek))
+		{
+			var last = entity.Snek.Parts.Last();
+			ConsoleCanvas.Draw(last.Position, entity.Skin.DeadGlyph(last.Direction), entity.Skin.HeadColor, entity.Skin.BaseColor);
 			entity.InvokeLoose();
+		}
 	}
 
 	GetInput(TimeSpan.FromSeconds(snek_speed / entities[0].Snek.Length));
@@ -144,6 +186,7 @@ void Exit(SnekEntity player)
 	for (int i = 1000; i > 800; i -= 50)
 		Console.Beep(i, 100);
 	Thread.Sleep(1000);
+	ConsoleCanvas.Clear();
 	ConsoleCanvas.Clean();
 	ConsoleCanvas.End();
 	Console.WriteLine($"YOU ACHIEVED SNEK LENGTH OF {player.Snek.Length}!");
@@ -165,6 +208,7 @@ record SnekSkin
 	public required ConsoleColor HeadColor { get; set; }
 	public required GlyphSelector HeadGlyph { get; set; }
 	public required GlyphSelector BodyGlyph { get; set; }
+	public required GlyphSelector DeadGlyph { get; set; }
 }
 
 delegate void PlayerBehaviour(SnekEntity self);

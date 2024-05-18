@@ -55,6 +55,8 @@ namespace SnekScrem
 			DrawBuffer.Clear();
 		}
 
+		public static void Clear() => DrawBuffer.Clear();
+
 		static public void Draw(Point pos, char c) => Draw(pos, c, null, null);
 
 		static public void Draw(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background)
