@@ -10,17 +10,17 @@ using System.Threading.Tasks;
 
 namespace SnekScrem
 {
-	class ConsoleCanvas
+	static class ConsoleCanvas
 	{
-		ConsoleColor Foreground;
-		ConsoleColor Background;
-		Point CursorPosition = Point.Empty;
-		HashSet<Point> DrawBuffer = new();
-		HashSet<Point> EraseBuffer = new();
+		static ConsoleColor Foreground;
+		static ConsoleColor Background;
+		static Point CursorPosition = Point.Empty;
+		static HashSet<Point> DrawBuffer = new();
+		static HashSet<Point> EraseBuffer = new();
 
-		public Size Size => new(Console.WindowWidth, Console.WindowHeight); 
+		static public Size Size => new(Console.WindowWidth, Console.WindowHeight); 
 
-		public void Begin()
+		static public void Begin()
 		{
 			Foreground = Console.ForegroundColor;
 			Background = Console.BackgroundColor;
@@ -28,7 +28,10 @@ namespace SnekScrem
 			(CursorPosition.X, CursorPosition.Y) = Console.GetCursorPosition();
 		}
 
-		public void End()
+		/// <summary>
+		/// Resets the Console to its initial state when <see cref="Begin"/> was last called
+		/// </summary>
+		static public void End()
 		{
 			Console.ForegroundColor = Foreground;
 			Console.BackgroundColor = Background;
@@ -36,7 +39,10 @@ namespace SnekScrem
 			Console.SetCursorPosition(CursorPosition.X, CursorPosition.Y);
 		}
 
-		public void Clean()
+		/// <summary>
+		/// Erases everything that has been drawn before the
+		/// </summary>
+		static public void Clean()
 		{
 			Console.ForegroundColor = Foreground;
 			Console.BackgroundColor = Background;
@@ -49,11 +55,10 @@ namespace SnekScrem
 			DrawBuffer.Clear();
 		}
 
-		public void Draw(Point pos, char c, bool transient = true) => Draw(pos, c, null, null);
+		static public void Draw(Point pos, char c) => Draw(pos, c, null, null);
 
-		public void Draw(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background)
+		static public void Draw(Point pos, char c, ConsoleColor? foreground, ConsoleColor? background)
 		{
-			DrawBuffer.Remove(pos);
 			DrawBuffer.Add(pos);
 			Console.ForegroundColor = foreground ?? Foreground;
 			Console.BackgroundColor = background ?? Background;

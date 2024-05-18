@@ -23,16 +23,14 @@ Move[] snek_moves = [
 ];
 
 
-
-var canvas = new ConsoleCanvas();
 Player[] players = [
 	new(new Snek(), new PlayerAgent(controls1), glyph_head, glyph_snek, it => Exit(it)),
 	//new(new Snek(), new PlayerAgent(controls2), glyph_head, glyph_snek, () => Environment.Exit(0)),
 	new(new Snek(), new NpcAgent(), new(':', '¨', ConsoleColor.Yellow, ConsoleColor.DarkRed), new('<', 'v', ConsoleColor.DarkMagenta, ConsoleColor.DarkRed), it => { it.Snek.Reset(Point.Empty, 1); }),
 ];
-canvas.Begin();
+ConsoleCanvas.Begin();
 
-players[0].Snek.Reset(new(canvas.Size.Width / 2, canvas.Size.Height / 2), 10);
+players[0].Snek.Reset(new(ConsoleCanvas.Size.Width / 2, ConsoleCanvas.Size.Height / 2), 10);
 players[1].Snek.Reset(Point.Empty, 1);
 
 while (true)
@@ -50,7 +48,7 @@ while (true)
 		Draw(player);
 	}
 
-	canvas.Clean();
+	ConsoleCanvas.Clean();
 	ConsoleInput.Update();
 
 	foreach (var player in players)
@@ -67,7 +65,7 @@ while (true)
 
 bool Test(Snek snek)
 {
-	snek.Position = new Point(Mod(snek.Position.X, canvas.Size.Width), Mod(snek.Position.Y, canvas.Size.Height));
+	snek.Position = new Point(Mod(snek.Position.X, ConsoleCanvas.Size.Width), Mod(snek.Position.Y, ConsoleCanvas.Size.Height));
 	
 	if (goodies.RemoveAll(pos => pos == snek.Position) > 0)
 	{
@@ -82,14 +80,14 @@ void Draw(Player player)
 {
 	var snek = player.Snek;
 	foreach (var goodie in goodies)
-		canvas.Draw(goodie, glyph_goodies.symbol, glyph_goodies.foreground, glyph_goodies.background);
+		ConsoleCanvas.Draw(goodie, glyph_goodies.symbol, glyph_goodies.foreground, glyph_goodies.background);
 
 	// draw snek bits
 	foreach (var bit in snek.Nodes)
-		canvas.Draw(bit, snek.Direction.IsHorizontal() ? player.BodyGlyph.symbol : player.BodyGlyph.other, player.BodyGlyph.foreground, player.BodyGlyph.background);
+		ConsoleCanvas.Draw(bit, snek.Direction.IsHorizontal() ? player.BodyGlyph.symbol : player.BodyGlyph.other, player.BodyGlyph.foreground, player.BodyGlyph.background);
 
 	// draw snek head
-	canvas.Draw(snek.Position, snek.Direction.IsHorizontal() ? player.HeadGlyph.symbol : player.HeadGlyph.other, player.HeadGlyph.foreground, player.HeadGlyph.background);
+	ConsoleCanvas.Draw(snek.Position, snek.Direction.IsHorizontal() ? player.HeadGlyph.symbol : player.HeadGlyph.other, player.HeadGlyph.foreground, player.HeadGlyph.background);
 
 }
 
@@ -106,8 +104,8 @@ void Exit(Player player)
 	for (int i = 1000; i > 800; i -= 50)
 		Console.Beep(i, 100);
 	Thread.Sleep(1000);
-	canvas.Clean();
-	canvas.End();
+	ConsoleCanvas.Clean();
+	ConsoleCanvas.End();
 	Console.WriteLine($"YOU ACHIEVED SNEK LENGTH OF {player.Snek.Length}!");
 	Environment.Exit(0);
 }
