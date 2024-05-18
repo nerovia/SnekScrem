@@ -14,7 +14,7 @@ namespace SnekScrem
 	{
 		ConsoleColor Foreground;
 		ConsoleColor Background;
-		Point CursorPosition;
+		Point CursorPosition = Point.Empty;
 		HashSet<Cell> DrawBuffer = new(CellPositionComparer.Default);
 		HashSet<Cell> EraseBuffer = new(CellPositionComparer.Default);
 
