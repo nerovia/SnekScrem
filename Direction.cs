@@ -4,10 +4,10 @@ namespace SnekScrem
 {
 	enum Direction
 	{
-		Up = -1,
-		Down = 1,
-		Left = 2,
-		Right = -2,
+		Up = 1,
+		Down = 2,
+		Left = 4,
+		Right = 8,
 		None = 0,
 	}
 
@@ -27,14 +27,21 @@ namespace SnekScrem
 			Direction.Down => new(0, 1),
 			Direction.Left => new(-1, 0),
 			Direction.Right => new(1, 0),
-			Direction.None => new(0, 0),
+			_ => new(0, 0)
+		};
+
+		public static Direction Opposite(this Direction direction) => direction switch
+		{
+			Direction.Up => Direction.Down,
+			Direction.Down => Direction.Up,
+			Direction.Left => Direction.Right,
+			Direction.Right => Direction.Right,
+			Direction.None => Direction.None,
 			_ => throw new ArgumentException()
 		};
 
-		public static Direction Inverse(this Direction direction) => (Direction)(-(int)direction);
+		public static bool IsHorizontal(this Direction direction) => (direction | Direction.Up | Direction.Down) != 0;
 
-		public static bool IsHorizontal(this Direction direction) => Math.Abs((int)direction) == 2;
-
-		public static bool IsVertical(this Direction direction) => Math.Abs((int)direction) == 1;
+		public static bool IsVertical(this Direction direction) => (direction | Direction.Left | Direction.Right) != 0;
 	}
 }

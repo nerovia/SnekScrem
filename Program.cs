@@ -3,92 +3,127 @@ using System.Diagnostics;
 using System.Drawing;
 using System.Reflection;
 
-Glyph glyph_head = new(':', '¨', ConsoleColor.Red, ConsoleColor.Green);
-Glyph glyph_snek = new('~', '?', ConsoleColor.Yellow, ConsoleColor.Green);
-Glyph glyph_goodies = new('&', ' ', ConsoleColor.Cyan, ConsoleColor.Magenta);
+var controls = new PlayerControls(ConsoleKey.UpArrow, ConsoleKey.DownArrow, ConsoleKey.LeftArrow, ConsoleKey.RightArrow);
+var green = new SnekSkin()
+{
+	BaseColor = ConsoleColor.Green,
+	BodyColor = ConsoleColor.Yellow,
+	HeadColor = ConsoleColor.Red,
+	HeadGlyph = direction => direction switch
+	{
+		Direction.Up or Direction.Down => '¨',
+		_ => ':',
+	},
+	BodyGlyph = direction => direction switch { _ => '~' }
+};
+var red = new SnekSkin()
+{ 
+	BaseColor = ConsoleColor.DarkRed,
+	BodyColor = ConsoleColor.DarkMagenta,
+	HeadColor = ConsoleColor.Yellow,
+	HeadGlyph = direction => direction switch
+	{
+		Direction.Up or Direction.Down => '¨',
+		_ => ':'
+	},
+	BodyGlyph = direction => direction switch
+	{
+		Direction.Up or Direction.Down => 'v',
+		_ => '>'
+	}
+};
+var treatGlyph = new ColoredGlyph('&', ConsoleColor.Magenta, ConsoleColor.Cyan);
 
-PlayerControls controls1 = new(ConsoleKey.UpArrow, ConsoleKey.DownArrow, ConsoleKey.LeftArrow, ConsoleKey.RightArrow);
-PlayerControls controls2 = new(ConsoleKey.W, ConsoleKey.S, ConsoleKey.A, ConsoleKey.D);
-
-
-List<Point> goodies = new();
 
 const double snek_speed = 0.6;
 
-Move[] snek_moves = [
-	new Move(ConsoleKey.UpArrow, Direction.Up),
-	new Move(ConsoleKey.DownArrow, Direction.Down),
-	new Move(ConsoleKey.RightArrow, Direction.Right),
-	new Move(ConsoleKey.LeftArrow, Direction.Left),
+List<Point> treats = new();
+SnekEntity[] entities = [
+	new SnekEntity()
+	{
+		Agent = new PlayerAgent(controls),
+		Skin = green,
+		ResetHandle = self => self.Snek.Reset(new(Console.WindowWidth / 2, Console.WindowHeight / 2), 10),
+		LooseHandle = self => Exit(self)
+	},
+	new SnekEntity()
+	{
+		Agent = new NpcAgent(),
+		Skin = red,
+		ResetHandle = self => self.Snek.Reset(Point.Empty, 2),
+		LooseHandle = self => self.InvokeReset()
+	},
+	new SnekEntity()
+	{
+		Agent = new NpcAgent(),
+		Skin = red,
+		ResetHandle = self => self.Snek.Reset(new Point(-2, -2), 2),
+		LooseHandle = self => self.InvokeReset()
+	},
 ];
 
-
-Player[] players = [
-	new(new Snek(), new PlayerAgent(controls1), glyph_head, glyph_snek, it => Exit(it)),
-	//new(new Snek(), new PlayerAgent(controls2), glyph_head, glyph_snek, () => Environment.Exit(0)),
-	new(new Snek(), new NpcAgent(), new(':', '¨', ConsoleColor.Yellow, ConsoleColor.DarkRed), new('<', 'v', ConsoleColor.DarkMagenta, ConsoleColor.DarkRed), it => { it.Snek.Reset(Point.Empty, 1); }),
-];
 ConsoleCanvas.Begin();
 
-players[0].Snek.Reset(new(ConsoleCanvas.Size.Width / 2, ConsoleCanvas.Size.Height / 2), 10);
-players[1].Snek.Reset(Point.Empty, 1);
+foreach (var entity in entities)
+	entity.InvokeReset();
 
 while (true)
 {
-	if (goodies.Count == 0)
+	if (treats.Count == 0)
 	{
 		var k = Random.Shared.Next(1, 5);
 		for (int i = 0; i < k; i++)
-			goodies.Add(new(Random.Shared.Next(0, Console.WindowWidth), Random.Shared.Next(0, Console.WindowHeight)));
+			treats.Add(new(Random.Shared.Next(0, Console.WindowWidth), Random.Shared.Next(0, Console.WindowHeight)));
 	}
 
-	var context = new Context(goodies, players.Select(it => it.Snek));
-	foreach (var player in players)
+
+	var context = new Context(treats, entities.Select(it => it.Snek));
+	foreach (var entity in entities)
 	{
-		Draw(player);
+		var snek = entity.Snek;
+		snek.Position = new Point(Mod(snek.Position.X, ConsoleCanvas.Size.Width), Mod(snek.Position.Y, ConsoleCanvas.Size.Height));
+		Draw(entity);
 	}
 
 	ConsoleCanvas.Clean();
 	ConsoleInput.Update();
 
-	foreach (var player in players)
+	foreach (var entity in entities)
 	{
-		player.Agent.Act(player.Snek, context);
-		player.Snek.Move();
-		if (Test(player.Snek))
-			player.Handle(player);
+		entity.Agent.Act(entity.Snek, context);
+		entity.Snek.Move();
+		if (Test(entity.Snek))
+			entity.InvokeLoose();
 	}
 
-	GetInput(TimeSpan.FromSeconds(snek_speed / players[0].Snek.Length));
+	GetInput(TimeSpan.FromSeconds(snek_speed / entities[0].Snek.Length));
 
 }
 
 bool Test(Snek snek)
 {
-	snek.Position = new Point(Mod(snek.Position.X, ConsoleCanvas.Size.Width), Mod(snek.Position.Y, ConsoleCanvas.Size.Height));
 	
-	if (goodies.RemoveAll(pos => pos == snek.Position) > 0)
+	if (treats.RemoveAll(pos => pos == snek.Position) > 0)
 	{
 		snek.Grow();
 		Task.Run(Console.Beep);
 	}
 
-	return snek.Length <= 0 || players.SelectMany(it => it.Snek.Nodes).Any(bit => bit == snek.Position) && snek.Direction != Direction.None;
+	return snek.Length <= 0 || entities.SelectMany(it => it.Snek.Nodes).Any(bit => bit == snek.Position) && snek.Direction != Direction.None;
 }
 
-void Draw(Player player)
+void Draw(SnekEntity player)
 {
 	var snek = player.Snek;
-	foreach (var goodie in goodies)
-		ConsoleCanvas.Draw(goodie, glyph_goodies.symbol, glyph_goodies.foreground, glyph_goodies.background);
+	var skin = player.Skin;
 
-	// draw snek bits
+	foreach (var goodie in treats)
+		ConsoleCanvas.Draw(goodie, treatGlyph.Glyph, treatGlyph.Foreground, treatGlyph.Background);
+
 	foreach (var bit in snek.Nodes)
-		ConsoleCanvas.Draw(bit, snek.Direction.IsHorizontal() ? player.BodyGlyph.symbol : player.BodyGlyph.other, player.BodyGlyph.foreground, player.BodyGlyph.background);
+		ConsoleCanvas.Draw(bit, skin.BodyGlyph(snek.Direction), skin.BodyColor, skin.BaseColor);
 
-	// draw snek head
-	ConsoleCanvas.Draw(snek.Position, snek.Direction.IsHorizontal() ? player.HeadGlyph.symbol : player.HeadGlyph.other, player.HeadGlyph.foreground, player.HeadGlyph.background);
-
+	ConsoleCanvas.Draw(snek.Position, skin.HeadGlyph(snek.Direction), skin.HeadColor, skin.BaseColor);
 }
 
 void GetInput(TimeSpan timeout)
@@ -96,10 +131,9 @@ void GetInput(TimeSpan timeout)
 	var watch = new Stopwatch();
 	watch.Start();
 	SpinWait.SpinUntil(() => Console.KeyAvailable || watch.Elapsed > timeout);
-	
 }
 
-void Exit(Player player)
+void Exit(SnekEntity player)
 {
 	for (int i = 1000; i > 800; i -= 50)
 		Console.Beep(i, 100);
@@ -112,8 +146,31 @@ void Exit(Player player)
 
 int Mod(int x, int m) => x < 0 ? ((x % m) + m) % m : x % m;
 
-record struct Glyph(char symbol, char other, ConsoleColor foreground, ConsoleColor background);
-
 record Move(ConsoleKey Key, Direction Direction);
 
-record Player(Snek Snek, IAgent Agent, Glyph HeadGlyph, Glyph BodyGlyph, Action<Player> Handle);
+delegate char GlyphSelector(Direction direction);
+
+record ColoredGlyph(char Glyph, ConsoleColor Foreground, ConsoleColor Background);
+
+record SnekSkin
+{
+	public required ConsoleColor BaseColor { get; set; }
+	public required ConsoleColor BodyColor { get; set; }
+	public required ConsoleColor HeadColor { get; set; }
+	public required GlyphSelector HeadGlyph { get; set; }
+	public required GlyphSelector BodyGlyph { get; set; }
+}
+
+delegate void PlayerBehaviour(SnekEntity self);
+
+record SnekEntity
+{
+	public Snek Snek { get; } = new();
+	public required IAgent Agent { get; init; }
+	public required SnekSkin Skin { get; init; }
+	public required PlayerBehaviour ResetHandle { get; init; }
+	public required PlayerBehaviour LooseHandle { get; init; }
+
+	public void InvokeReset() => ResetHandle(this);
+	public void InvokeLoose() => LooseHandle(this);
+}

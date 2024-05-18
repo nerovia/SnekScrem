@@ -26,7 +26,7 @@ namespace SnekScrem
 			];
 
 			subject.Direction = moves
-				.Where(it => it.dir != subject.Direction.Inverse())
+				.Where(it => it.dir != subject.Direction.Opposite())
 				.FirstOrDefault(it => ConsoleInput.HasKeyDown(it.key), (key: ConsoleKey.None, dir: subject.Direction)).dir;
 
 		}
