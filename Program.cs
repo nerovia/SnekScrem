@@ -16,7 +16,7 @@ var green = new SnekSkin()
 	},
 	BodyGlyph = direction => direction switch 
 	{
-		Direction.Up or Direction.Down => '|',
+		Direction.Up or Direction.Down => '¦',
 		_ => '-',
 	},
 	DeadGlyph = _ => 'X',
