@@ -35,7 +35,7 @@ namespace SnekScrem
 			Direction.Up => Direction.Down,
 			Direction.Down => Direction.Up,
 			Direction.Left => Direction.Right,
-			Direction.Right => Direction.Right,
+			Direction.Right => Direction.Left,
 			Direction.None => Direction.None,
 			_ => throw new ArgumentException()
 		};
